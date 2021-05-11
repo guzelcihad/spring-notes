@@ -66,3 +66,35 @@ logging.level.org.hibernate.type=trace
 ```
 When this configs defined the app. logs becomes like this.
 ![alt text](/images/jpa/1.PNG)
+
+## Cache
+Two level cache available. First level cache lives within a single transaction.
+Second level cache is cache across all transactions.
+
+Here is how first level cache works.
+```
+public void findById() {
+    Course course = repository.findById(100l);
+    Course course1 = repository.findById(100l);
+} 
+```
+
+If we call this method twice then jpa will go to db twice. But if we put @Transactional annotation to the method
+then the second method call doesn't go to db. Because it will be cached. Because first level cache lives within the 
+boundaries of the transaction.
+<br>
+In the first example it doesnt cached because the two method calls live within another transaction boundaries.
+<br>
+Q1: What is the difference to use Transactional annotation at class level and method level?
+
+> In case 1 @Transactional is applied to every public individual method. Private and Protected methods are Ignored by Spring. In case 2 @Transactional is only applied to method2(), not on method1()
+
+> Case 1: - Invoking method1() -> a transaction is started. When method1() calls method2() no new transaction is started, because there is already one
+
+> Case 2: - Invoking method1() -> no transaction is started. When method1() calls method2() NO new transaction is started. This is because @Transactional does not work when calling a method from within the same class. It would work if you would call method2() from another class.
+Yukarıdaki ilk örnekte repository class üzerinde transaction anotasyon vardı. Bu sebeple o sınıfın herhangi
+bir methodu çağrıldığında hepsi aynı transaction içinde yaşar.
+
+### Second Level Cache
+Second level cache needs configuration. We can use ehcache.
+@Cacheable anotasyonu entity class'a ekleyerek o entity'i cacheleyebiliriz.
