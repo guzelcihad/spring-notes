@@ -79,10 +79,98 @@ NOTE: Reactive programming,reactive manifesto, reactive systems can be seem same
 Reactive programming is driven by events
 
 # Reactive Streams
+The purpose of Reactive Streams is to provide a standard for asynchronous stream processing with non-blocking backpressure.
 The purpose of the reactive streams is to provide a contract:
 * Asynchronous
 * Non-blocking
 * Backpressure
-to support this functionality. 
+to support this functionality. This is a specification.
 
 developed by lightbend, netflix,twitter
+
+In summary, Reactive Streams is a standard and specification for Stream-oriented libraries for the JVM that
+
+ - process a potentially unbounded number of elements
+ - in sequence,
+ - asynchronously passing elements between components,
+ - with mandatory non-blocking backpressure.
+
+The Reactive Streams specification consists of the following parts:
+
+***The API*** specifies the types to implement Reactive Streams and achieve interoperability between different implementations.
+
+***The Technology Compatibility Kit (TCK)*** is a standard test suite for conformance testing of implementations.
+
+Implementations are free to implement additional features not covered by the specification as long as they conform to the API requirements and pass the tests in the TCK.
+
+### API Components ###
+
+The API consists of the following components that are required to be provided by Reactive Stream implementations:
+
+1. Publisher
+2. Subscriber
+3. Subscription
+4. Processor
+
+A *Publisher* is a provider of a potentially unbounded number of sequenced elements, publishing them according to the demand received from its Subscriber(s).
+
+```
+Core Interfaces
+
+public interface Publisher<T> {
+    public void subscribe(Subscriber<? super T> s);
+}
+
+public interface Subscriber<T> {
+    public void onSubscribe(Subscription s);
+    public void onNext(T t);
+    public void onError(Throwable t);
+    public void onComplete();
+}
+
+public interface Subscription {
+    public void request(long n);
+    public void cancel();
+}
+
+public interface Processor<T, R> extends Subscriber<T>, Publisher<R> {
+}
+```
+
+Publisher, publish elements to any number of subscribers, at the rate specified through a subscription.
+Processors are publishers and subscribers at the same time. They are hard to use correctly and most of the time you
+wont need them.
+
+> A Publisher of type T will publish elements of type T or a subclass of T to its subcribers.
+
+> onSubscribe() is called when the subscriber subscribes to a publisher. Subscription object is passed
+to this method.
+> onNext() method is always called when an an element is sent to the subscriber
+
+> If there is an exceptions at some point, onError() is called with this exception.
+
+> Finally, when all the elements are published the method onComplete() is executed.
+
+> request() method in Subscription, request to the publisher any number of elements. This represents backpressure mechanism.
+
+> cancel() , cancels the subscription
+
+This is how they work;
+- First, the subscribe method is called on the publisher.
+- Then, a subscription object is created and the onSubscribe method of the subscriber is executed, passing the subscription object.
+- To start receiving element, a subscriber must execute the request method indicating how many elements it can process. If you
+don't call explicitly, an unbounded number of elements is requested.
+- Subscriber then receive elements via the onNext method. It receives elements until 3 things happen.
+- One, publisher sends all the elements requested via request method.
+- Two, if there are no elements to send, puslisher calls the onComplete method and subscription is cancelled.
+- If at some points there is an error, the publisher calls the onError method and subscription is cancelled.
+
+### Project Reactor
+The default reactive programming library in Spring WebFlux.
+Provides two implementations for publisher interface. 
+- Mono to publish 0 or 1 element.
+- Flux, publish more than 1 element.
+This is for clarity. 
+<p>
+Think Mono like reactive version of Optional type in Java.
+Think Flux like list.

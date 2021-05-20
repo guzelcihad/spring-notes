@@ -98,3 +98,26 @@ bir methodu çağrıldığında hepsi aynı transaction içinde yaşar.
 ### Second Level Cache
 Second level cache needs configuration. We can use ehcache.
 @Cacheable anotasyonu entity class'a ekleyerek o entity'i cacheleyebiliriz.
+
+## Hard Delete Soft Delete
+We just add an entity called isDeleted and add an annotation to the top of the entity @SQLDelete.
+Its a hibernate annotations not JPA.
+
+```
+@SQLDelete(sql="update course set is_deleted=true where id=?")
+```
+Filtering Entities with @Where
+
+> Suppose we want to provide an additional condition to the query whenever we request some entity.
+
+> For instance, we need to implement “soft delete”. This means that the entity is never deleted from the database, but only marked as deleted with a boolean field.
+
+> We'd have to take great care with all existing and future queries in the application. We'd have to provide this additional condition to every query. Fortunately, Hibernate provides a way to do this in one place:
+
+To be able to fetch the true records in select statements we just need to add annotation
+```
+@Where(clause="is_deleted = false")
+```
+This annotation adds this criteria in every select statements.
+<br>
+This annotation doesnt apply to native queries.
