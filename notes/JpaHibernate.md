@@ -65,7 +65,127 @@ spring.jpa.properties.hibernate.format_sql=true
 logging.level.org.hibernate.type=trace
 ```
 When this configs defined the app. logs becomes like this.
-![alt text](/images/jpa/1.PNG)
+![alt text](../images/jpa/1.PNG)
+
+## Writing Test Methods For Repository
+The @SpringBootTest annotation tells Spring Boot to look for a main configuration class (one with @SpringBootApplication, for instance) and use that to start a Spring application context. 
+
+```
+A nice feature of the Spring Test support is that the application context is cached between tests. That way, if you have multiple methods in a test case or multiple test cases with the same configuration, they incur the cost of starting the application only once. You can control the cache by using the @DirtiesContext annotation.
+```
+You need to use @DirtiesContext where you test your data changes. Because you can delete, update or insert
+data and other test should not affect these changes. So we use this annotation to reset the changes
+happened in current unit test.
+
+```
+@RunWith(SpringRunner.class)
+@SpringBootTest(classes=DemoApplication.class)
+public class CourseRepositoryTest {
+	
+	private Logger logger = LoggerFactory.getLogger(this.getClass());
+	
+	@Autowired
+	CourseRepository repository;
+	
+	@Test
+	public void findById_basic() {
+		Course course = repository.findById(10001L);
+		assertEquals("JPA in 50 Steps", course.getName());
+	}
+
+}
+```
+
+## Delete By Id
+When we call this method
+```
+    public void deleteById(Long id){
+        Course course = findById(id);
+        em.remove(course);
+    }
+```
+
+Spring raises an error that it needs a transaction. So we add Spring @Transactional annotation
+to the repository.
+
+
+## EntityManager
+```
+public void playWithEntityManager() {
+		Course course = new Course("Web Services in 100 Steps");
+		em.persist(course);
+		course.setName("Web Services in 100 Steps - Updated");
+	}
+```
+When we run this code, it first creates an insert script then an update scripts. Why?
+Because we use @Transactional at the class level and EntityManager keep tracks the
+changes in method.
+
+### Detach Method
+em.flush() eagerly updates the changes in db.
+em.detach(obj), breaks the keeping track the obj. So the changes
+on that obj doesn't reflect on to database.
+<br>
+There is also another method em.clear() which breaks all the tracking objects.
+ 
+```
+public void playWithEntityManager() {
+		
+		Course course1 = new Course("Web Services in 100 Steps");
+		em.persist(course1);	
+		
+		Course course2 = new Course("Angular Js in 100 Steps");
+		em.persist(course2);
+
+		em.flush();
+
+		course1.setName("Web Services in 100 Steps - Updated");
+		course2.setName("Angular Js in 100 Steps - Updated");
+		
+		em.refresh(course1);
+		
+		em.flush();
+	}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## Cache
 Two level cache available. First level cache lives within a single transaction.
