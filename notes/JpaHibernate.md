@@ -121,12 +121,15 @@ When we run this code, it first creates an insert script then an update scripts.
 Because we use @Transactional at the class level and EntityManager keep tracks the
 changes in method.
 
-### Detach Method
+### Methods
 em.flush() eagerly updates the changes in db.
 em.detach(obj), breaks the keeping track the obj. So the changes
 on that obj doesn't reflect on to database.
 <br>
 There is also another method em.clear() which breaks all the tracking objects.
+<br>
+em.refresh(obj1) => it refresh obj1 content from db. So if its value updated in transaction before
+refresh method call, then its value gone. Because its replaced with the value exist in db.
  
 ```
 public void playWithEntityManager() {
@@ -147,27 +150,115 @@ public void playWithEntityManager() {
 		em.flush();
 	}
 ```
+## JPQL
+Simple query returns the Query interface
+```
+Query query = em.createQuery("Select  c  From Course c");
+		List resultList = query.getResultList();
+```
+Query that returns type via TypedQuery interface
+```
+TypedQuery<Course> query = 
+					em.createQuery("Select  c  From Course c", Course.class);
+		
+		List<Course> resultList = query.getResultList();
+```
+
+## Annotations
+* @Table(name="Course")
+* @Column(name="name", nullable=false)
+* @UpdateTimestamp => hibernate annotation not jpa, keeps track updated row
+* @CreationTimestamp => same as above
+
+## NamedQuery
+We define query on top of entity:
+```
+@NamedQueries(value = { 
+		@NamedQuery(name = "query_get_all_courses", 
+				query = "Select  c  From Course c")})
+
+TypedQuery<Course> query = em.createNamedQuery("query_get_all_courses", Course.class);
+```
+
+## NativeQuery
+Just an sql query like select * , jpql queries are different it says select c from course
+```
+Query query = em.createNativeQuery("SELECT * FROM COURSE where id = ?", Course.class);
+```
+
+Queries with named parameters
+```
+Query query = em.createNativeQuery("SELECT * FROM COURSE where id = :id", Course.class);
+		query.setParameter("id", 10001L);
+```
+
+# Entity RelationShips
+
+## OneToOne
+Student has passport in table.
+
+If we define a method like this its gonna throw an error. Because passoword doesn't exist yet.
+We first persist passport record.
+```
+Passport passport = new Passport("Z123456");
+Student student = new Student("Mike");
+student.setPassport(passport);
+em.persist(student);
+```
+The correct way
+```
+Passport passport = new Passport("Z123456");
+em.persist(passport);
+        
+Student student = new Student("Mike");
+student.setPassport(passport);
+em.persist(student);
+```
+* If we query for retrieve in Student entity, the query is eager by default. Meaning that
+its gonna create a query with left join with passport table. Any OneToOne query is eager by default.
+
+@OneToOne(fetch = FetchType.LAZY) is what we need.
 
 
+```
+	@Test
+	@Transactional
+	public void retrieveStudentAndPassportDetails() {
+		Student student = em.find(Student.class, 20001L);
+		logger.info("student -> {}", student);
+		logger.info("passport -> {}",student.getPassport());
+	}
+```
+If we are gonna run this method without Transactional, then it is gonna raise an exception in the
+line student.getPassport(). Because hibernate thinks when we run find method
+it kills the session.
+<br>
+In the student.getPassport() method another query fires up and it is gonna query the passport table lazily.
 
+- Persistence Context it the place where the all entites are stored and managed. 
+- We interact with the Persistence Context via EntityManager
+* In hibernate session means persistence context, 
 
+### Unidirectional Bidirectional Relations
+In this student password example, if we put a field in password entity like this
 
+```
+@OneToOne(fetch=FetchType.LAZY)
+	private Student student;
+```
+Then its gonna create studentId column in passport table.
+<br>
+This is not what we want because we already have this relation in student table. Student table
+is the owner of this relation and this way we are gonna create duplication.
+We just want one side holds this relation. That's why we add this code block in Pasport table.
 
+<br>
+@OneToOne(fetch=FetchType.LAZY, mappedBy="passport")
+	private Student student;
+<br>
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+We added this info, the non owner side. And we refer in mappedBy annotation to the
+owner side prop.
 
 
 
