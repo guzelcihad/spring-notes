@@ -260,9 +260,39 @@ We just want one side holds this relation. That's why we add this code block in 
 We added this info, the non owner side. And we refer in mappedBy annotation to the
 owner side prop.
 
+## OneToMany
+Course can have many reviews. A review can exist within the one course.
+So, we need to add this to the Course class. 
 
+```
+@OneToMany(mappedBy = "course")
+private List<Review> reviews = new ArrayList<>();
+```
 
+We can also define getters and setters. But we dont need to have setters.
+Because it accepts for list of reviews. We usually don't need that.
+Instead we need one review for course. So, in order to control that we can add this
+methods.
 
+```
+    public void addReview(Review review) {
+        reviews.add(review);
+    }
+    
+    public void removeReview(Review review) {
+        reviews.remove(review);
+    }
+```
+
+And also we add this to the Review entity.
+```
+@ManyToOne
+private Course course;
+```
+In this relation, review is the owner. Because we add courseid colomn to the review table.
+So, mappedBy will be in course entity.
+
+> PS: By default, the JPA @ManyToOne and @OneToOne annotations are fetched EAGERly, while the @OneToMany and @ManyToMany relationships are considered LAZY.
 
 
 
@@ -332,3 +362,39 @@ To be able to fetch the true records in select statements we just need to add an
 This annotation adds this criteria in every select statements.
 <br>
 This annotation doesnt apply to native queries.
+
+# FAQS
+## When Hibernate Sends Updates to Db?
+Assume that we have this method. Hibernate keeps all the changes until the end of the method.
+When method finished hibernate sends updates to db.
+
+```
+	@Transactional
+    public void saveStudentWithPassword() {
+        Passport passport = new Passport("Z123456");
+        em.persist(passport);
+
+        Student student = new Student("Mike");
+        student.setPassport(passport);
+        em.persist(student);
+
+        student.setName("Cihad");
+        passport.setNumber("34");
+    } 
+```
+
+Lets say that we use em.flush() after the calling em.persist in student object.
+And after that updates were failed. Even though this scenario hibernate rollbacks all the things.
+
+## When we need @Transaction in Unit Test?
+Assume that we add transaction annotation in the repository class.
+<br>
+Unit Test -> Repository -> EntityManager : no need to add 
+Unit Test -> Entity Manager : need to add
+
+## Do read only methods need a transaction?
+If you have a couple of lines you read data, Yes we need to add.  
+Because transaction is not only about data changes. For ex: when you read
+something you may want to read latest values, not stale data.
+And it is possible at the time when you are reading some thing the other
+transaction may changes the value you are reading. Its about isolation.
