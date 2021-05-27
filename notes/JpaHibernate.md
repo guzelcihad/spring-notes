@@ -294,19 +294,157 @@ So, mappedBy will be in course entity.
 
 > PS: By default, the JPA @ManyToOne and @OneToOne annotations are fetched EAGERly, while the @OneToMany and @ManyToMany relationships are considered LAZY.
 
+## ManyToMany
 
+Course and Student entities are the example of this relation.
+We just insert to list to the each class and annotated each other with ManyToMany.
+<br>
+But this is gonna create two tables in db called courses_student, student_courses.
+We just expect it to create one table.
+<br>
+To be able to solve this problem we just gonna make one entity is the owning side of the
+relationship.
+<br>
+For many to many relationship it is not important which entity is the owning side.
+<br>
+It is creating a table called STUDENT_COURSES with STUDENTS_ID, COURSES_ID.
+<br>
+We don't want this plurals in column names.  
+We add this annotation in the owning side of the relation
+```
+    @ManyToMany
+    @JoinTable(name = "STUDENT_COURSE",
+        joinColumns = @JoinColumn(name = "STUDENT_ID"),
+            inverseJoinColumns = @JoinColumn(name = "COURSE_ID"))
+    private List<Course> courses = new ArrayList<>();
+```
+Why we did that?
+Because when we don't define this relation names its gonna 
 
+# INHERITANCE
+4 types exist. Single table, table per class, joined, mapped super class.
 
+So, just define entities:
+```
+@Entity
+public abstract class Employee {
 
+    @Id
+    @GeneratedValue
+    private Long id;
 
+    @Column(nullable = false)
+    private String name;
+}
+```
 
+```
+@Entity
+public class FullTimeEmployee extends Employee {
+    protected FullTimeEmployee() {
+    }
 
+    public FullTimeEmployee(String name, BigDecimal salary) {
+        super(name);
+        this.salary = salary;
+    }
 
+    private BigDecimal salary;
 
+}
+```
+```
+@Entity
+public class PartTimeEmployee extends Employee {
 
+    protected PartTimeEmployee() {
+    }
 
+    public PartTimeEmployee(String name, BigDecimal hourlyWage) {
+        super(name);
+        this.hourlyWage = hourlyWage;
+    }
 
+    private BigDecimal hourlyWage;
 
+}
+```
+
+## Single Table
+The default strategy if we dont specify it.
+
+We just add this annotation the the Employee entity. And it just creates one table and holds
+other parttime and full time emplyee like this format.
+```
+@Entity
+@Inheritance(strategy=InheritanceType.SINGLE_TABLE)
+public abstract class Employee {
+```
+
+| DTYPE   | ID  | NAME | HOURLY_WAGE | SALARY
+|---|---|---|---|---|
+|PartTimeEmployee|1|Jill|50.00|null|
+|FullTimeEmployee|2|Jack|null|1000.00|
+
+The drawbacks is so much null values may available. Data integrity is not really good.
+The advantage, efficient because one table.
+
+With this annotation we simply change dtype column to something more readable.
+```
+@DiscriminatorColumn(name="EmployeeType")
+```
+
+## Table Per Class
+This strategy creates two table called FULL_TIME_EMPLOYEE and PART_TIME_EMPLOYEE respectively.
+<br>
+When we gett all employee informations hibernate creates a huge query, with union all.
+```
+@Inheritance(strategy=InheritanceType.TABLE_PER_CLASS)
+```
+The drawback is design of the table. If you have a lot of common columns they repeated 
+in every tables.
+
+## Joined
+This strategy creates three table called EMPLOYEE, FULL_TIME_EMPLOYEE and PART_TIME_EMPLOYEE respectively.
+<br>
+subclasses table only have id column from super class.
+```
+@Inheritance(strategy=InheritanceType.JOINED)
+```
+This strategy holds common detail in base entity and spesific detail in sub entities.
+Sub tables have foreign key id.
+
+## Mapped Super Class
+This strategy creates two tables called FULL_TIME_EMPLOYEE and PART_TIME_EMPLOYEE respectively.
+<br>
+This is a different kind of strategy. This strategy doesn't mark entity as entity.
+This is just base for subentities.
+```
+@MappedSuperclass
+//@Entity
+//@Inheritance(strategy=InheritanceType.JOINED)
+public abstract class Employee {
+```
+
+Q1: Difference between Table per Class vs Mapped Super Class
+```
+MappedSuperClass must be used to inherit properties, associations, and methods.
+
+Entity inheritance must be used when you have an entity, and several sub-entities.
+
+You can tell if you need one or the other by answering this questions: is there some other entity in the model which could have an association with the base class?
+
+If yes, then the base class is in fact an entity, and you should use entity inheritance. If no, then the base class is in fact a class that contains attributes and methods that are common to several unrelated entities, and you should use a mapped superclass.
+
+For example:
+
+You can have several kinds of messages: SMS messages, email messages, or phone messages. And a person has a list of messages. You can also have a reminder linked to a message, regardless of the kind of message. In this case, Message is clearly an entity, and entity inheritance must be used.
+All your domain objects could have a creation date, modification date and ID, and you could thus make them inherit from a base AbstractDomainObject class. But no entity will ever have an association to an AbstractDomainObject. It will always be an association to a more specific entity: Customer, Company, whatever. In this case, it makes sense to use a MappedSuperClass.
+```
+
+## Summarize
+If you care data integrity, joined is perfect. Because it has foreign keys related with base entity.
+If you care performance, single table should be pick.
 
 ## Cache
 Two level cache available. First level cache lives within a single transaction.
