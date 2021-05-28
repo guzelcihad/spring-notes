@@ -446,7 +446,256 @@ All your domain objects could have a creation date, modification date and ID, an
 If you care data integrity, joined is perfect. Because it has foreign keys related with base entity.
 If you care performance, single table should be pick.
 
-## Cache
+# JPQL
+
+Find courses which doesn't have students
+```
+	@Test
+	public void jpql_courses_without_students() {
+		TypedQuery<Course> query = em.createQuery("Select c from Course c where c.students is empty", Course.class);
+		List<Course> resultList = query.getResultList();
+		logger.info("Results -> {}", resultList);
+		// [Course[Spring in 50 Steps]]
+	}
+```
+Find courses which have at least 2 students
+```
+	@Test
+	public void jpql_courses_with_atleast_2_students() {
+		TypedQuery<Course> query = em.createQuery("Select c from Course c where size(c.students) >= 2", Course.class);
+		List<Course> resultList = query.getResultList();
+		logger.info("Results -> {}", resultList);
+		//[Course[JPA in 50 Steps]]
+	}
+```
+Find courses order by students
+```
+@Test
+	public void jpql_courses_ordered_by_students() {
+		TypedQuery<Course> query = em.createQuery("Select c from Course c order by size(c.students) desc", Course.class);
+		List<Course> resultList = query.getResultList();
+		logger.info("Results -> {}", resultList);
+	}
+```
+Like example
+```
+	@Test
+	public void jpql_students_with_passports_in_a_certain_pattern() {
+		TypedQuery<Student> query = em.createQuery("Select s from Student s where s.passport.number like '%1234%'", Student.class);
+		List<Student> resultList = query.getResultList();
+		logger.info("Results -> {}", resultList);
+	}
+```
+Join samples
+```
+	@Test
+	public void join(){
+		Query query = em.createQuery("Select c, s from Course c JOIN c.students s");
+		List<Object[]> resultList = query.getResultList();
+		logger.info("Results Size -> {}", resultList.size());
+		for(Object[] result:resultList){
+			logger.info("Course{} Student{}", result[0], result[1]);
+		}
+	}
+
+	@Test
+	public void left_join(){
+		Query query = em.createQuery("Select c, s from Course c LEFT JOIN c.students s");
+		List<Object[]> resultList = query.getResultList();
+		logger.info("Results Size -> {}", resultList.size());
+		for(Object[] result:resultList){
+			logger.info("Course{} Student{}", result[0], result[1]);
+		}
+	}
+
+	@Test
+	public void cross_join(){
+		Query query = em.createQuery("Select c, s from Course c, Student s");
+		List<Object[]> resultList = query.getResultList();
+		logger.info("Results Size -> {}", resultList.size());
+		for(Object[] result:resultList){
+			logger.info("Course{} Student{}", result[0], result[1]);
+		}
+	}
+```
+## Criteria Builder
+```
+@Test
+	public void all_courses() {
+		// "Select c From Course c"
+
+		// 1. Use Criteria Builder to create a Criteria Query returning the
+		// expected result object
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Course> cq = cb.createQuery(Course.class);
+
+		// 2. Define roots for tables which are involved in the query
+		Root<Course> courseRoot = cq.from(Course.class);
+
+		// 3. Define Predicates etc using Criteria Builder
+
+		// 4. Add Predicates etc to the Criteria Query
+
+		// 5. Build the TypedQuery using the entity manager and criteria query
+		TypedQuery<Course> query = em.createQuery(cq.select(courseRoot));
+
+		List<Course> resultList = query.getResultList();
+
+		logger.info("Typed Query -> {}", resultList);
+		// [Course[JPA in 50 Steps], Course[Spring in 50 Steps], Course[Spring
+		// Boot in 100 Steps]]
+	}
+
+    @Test
+	public void all_courses_having_100Steps() {
+		// "Select c From Course c where name like '%100 Steps' "
+
+		// 1. Use Criteria Builder to create a Criteria Query returning the
+		// expected result object
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Course> cq = cb.createQuery(Course.class);
+
+		// 2. Define roots for tables which are involved in the query
+		Root<Course> courseRoot = cq.from(Course.class);
+
+		// 3. Define Predicates etc using Criteria Builder
+		Predicate like100Steps = cb.like(courseRoot.get("name"), "%100 Steps");
+
+		// 4. Add Predicates etc to the Criteria Query
+		cq.where(like100Steps);
+
+		// 5. Build the TypedQuery using the entity manager and criteria query
+		TypedQuery<Course> query = em.createQuery(cq.select(courseRoot));
+
+		List<Course> resultList = query.getResultList();
+
+		logger.info("Typed Query -> {}", resultList);
+		// [Course[Spring Boot in 100 Steps]]
+	}
+
+    @Test
+	public void all_courses_without_students() {
+		// "Select c From Course c where c.students is empty"
+
+		// 1. Use Criteria Builder to create a Criteria Query returning the
+		// expected result object
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Course> cq = cb.createQuery(Course.class);
+
+		// 2. Define roots for tables which are involved in the query
+		Root<Course> courseRoot = cq.from(Course.class);
+
+		// 3. Define Predicates etc using Criteria Builder
+		Predicate studentsIsEmpty = cb.isEmpty(courseRoot.get("students"));
+
+		// 4. Add Predicates etc to the Criteria Query
+		cq.where(studentsIsEmpty);
+
+		// 5. Build the TypedQuery using the entity manager and criteria query
+		TypedQuery<Course> query = em.createQuery(cq.select(courseRoot));
+
+		List<Course> resultList = query.getResultList();
+
+		logger.info("Typed Query -> {}", resultList);
+		// [Course[Spring in 50 Steps]]
+	}
+
+	@Test
+	public void join() {
+		// "Select c From Course c join c.students s"
+
+		// 1. Use Criteria Builder to create a Criteria Query returning the
+		// expected result object
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Course> cq = cb.createQuery(Course.class);
+
+		// 2. Define roots for tables which are involved in the query
+		Root<Course> courseRoot = cq.from(Course.class);
+
+		// 3. Define Predicates etc using Criteria Builder
+		Join<Object, Object> join = courseRoot.join("students");
+
+		// 4. Add Predicates etc to the Criteria Query
+
+		// 5. Build the TypedQuery using the entity manager and criteria query
+		TypedQuery<Course> query = em.createQuery(cq.select(courseRoot));
+
+		List<Course> resultList = query.getResultList();
+
+		logger.info("Typed Query -> {}", resultList);
+		// [Course[JPA in 50 Steps], Course[JPA in 50 Steps], Course[JPA in 50
+		// Steps], Course[Spring Boot in 100 Steps]]
+	}
+
+	@Test
+	public void left_join() {
+		// "Select c From Course c left join c.students s"
+
+		// 1. Use Criteria Builder to create a Criteria Query returning the
+		// expected result object
+		CriteriaBuilder cb = em.getCriteriaBuilder();
+		CriteriaQuery<Course> cq = cb.createQuery(Course.class);
+
+		// 2. Define roots for tables which are involved in the query
+		Root<Course> courseRoot = cq.from(Course.class);
+
+		// 3. Define Predicates etc using Criteria Builder
+		Join<Object, Object> join = courseRoot.join("students", JoinType.LEFT);
+
+		// 4. Add Predicates etc to the Criteria Query
+
+		// 5. Build the TypedQuery using the entity manager and criteria query
+		TypedQuery<Course> query = em.createQuery(cq.select(courseRoot));
+
+		List<Course> resultList = query.getResultList();
+
+		logger.info("Typed Query -> {}", resultList);
+		// [Course[JPA in 50 Steps], Course[JPA in 50 Steps], Course[JPA in 50
+		// Steps], Course[Spring in 50 Steps], Course[Spring Boot in 100 Steps]]
+	}
+```
+# ACID
+All of operations will be success or fail. Either execure or not at all.
+
+Consistency : Leaving the system in a consistent state. For: ex we send money from one account to another
+if transaction succeded then the total sum of the balance in the accounts should be same.
+
+Isolation: Transaction should be executed in isolation from other transaction. One transaction updates a value, will the other transaction see that change? There are
+multiple isolation levels.
+<br>
+Isolation levels define the degree to which a transaction must be isolated from the data modifications made by any other transaction in the database system
+
+Durability: The changes in the db should persist. Persistence in the case of failures 
+
+## Reads in Db
+Dirty Read
+> A Dirty read is the situation when a transaction reads a data that has not yet been committed. For example, Let’s say transaction 1 updates a row and leaves it uncommitted, meanwhile, Transaction 2 reads the updated row. If transaction 1 rolls back the change, transaction 2 will have read data that is considered never to have existed.
+
+Non Repeatable read
+> Non Repeatable read occurs when a transaction reads same row twice, and get a different value each time. For example, suppose transaction T1 reads data. Due to concurrency, another transaction T2 updates the same data and commit, Now if transaction T1 rereads the same data, it will retrieve a different value.
+
+Phantom Read
+> Phantom Read occurs when two same queries are executed, but the rows retrieved by the two, are different. For example, suppose transaction T1 retrieves a set of rows that satisfy some search criteria. Now, Transaction T2 generates some new rows that match the search criteria for transaction T1. If transaction T1 re-executes the statement that reads the rows, it gets a different set of rows this time.
+
+## Isolation Levels
+Level | Dirty Read | Non Repeatable Read | Phantom Read
+---| --- | --- | --- |
+Read Uncommitted | Possible | Possible | Possible |
+Read Committed | Solved | Possible | Possible |
+Repeatable Read | Solved | Solved | Possible |
+Serializable | Solved | Solved | Solved |
+
+Read committed is the default transaction level in Postgre, repeatable read in MySQL.
+
+## Transactions in Java
+Two types of annotation exist Spring provided and Jpa provided.
+Jpa provided(javax.annotation) can work on single db operations.
+If you want to provide a transaction guarantee across multiple db or mq, you need Spring provided.
+<br>
+We can also use isolation levels in spring annotation.
+
+
+# Cache
 Two level cache available. First level cache lives within a single transaction.
 Second level cache is cache across all transactions.
 
@@ -501,7 +750,119 @@ This annotation adds this criteria in every select statements.
 <br>
 This annotation doesnt apply to native queries.
 
+# Spring Data JPA
+Its an umbrella project that aims to work any type of databases, and saves
+us from boilerplate repository codes.
+<br>
+Spring data repositories should be interface. In hibernate it was class.
+<br>
+One of the beautiful thing with spring data repo method return optional types.
+
+## Methods
+* save(T) => use for insert and update
+* findById(ID) 
+* findAll()
+* count()
+
+Examples:
+```
+@Test
+	public void findById_CoursePresent() {
+		Optional<Course> courseOptional = repository.findById(10001L);
+		assertTrue(courseOptional.isPresent());
+	}
+
+	@Test
+	public void findById_CourseNotPresent() {
+		Optional<Course> courseOptional = repository.findById(20001L);
+		assertFalse(courseOptional.isPresent());
+	}
+
+	@Test
+	public void playingAroundWithSpringDataRepository() {
+		//Course course = new Course("Microservices in 100 Steps");
+		//repository.save(course);
+
+		//course.setName("Microservices in 100 Steps - Updated");
+		//repository.save(course);
+		logger.info("Courses -> {} ", repository.findAll());
+		logger.info("Count -> {} ", repository.count());
+	}
+
+	@Test
+	public void sort() {
+		Sort sort = new Sort(Sort.Direction.ASC, "name");
+		logger.info("Sorted Courses -> {} ", repository.findAll(sort));
+		//Courses -> [Course[JPA in 50 Steps], Course[Spring in 50 Steps], Course[Spring Boot in 100 Steps]] 
+	}
+
+	@Test
+	public void pagination() {
+		PageRequest pageRequest = PageRequest.of(0, 3);
+		
+		Page<Course> firstPage = repository.findAll(pageRequest);
+		logger.info("First Page -> {} ", firstPage);
+	}
+```
+
+## Ways to Define Your Queries
+```
+@RepositoryRestResource(path="courses")
+public interface CourseSpringDataRepository extends JpaRepository<Course, Long> {
+	List<Course> findByNameAndId(String name, Long id);
+
+	List<Course> findByName(String name);
+
+	List<Course> countByName(String name);
+
+	List<Course> findByNameOrderByIdDesc(String name);
+
+	List<Course> deleteByName(String name);
+
+	@Query("Select  c  From Course c where name like '%100 Steps'")
+	List<Course> courseWith100StepsInName();
+
+	@Query(value = "Select  *  From Course c where name like '%100 Steps'", nativeQuery = true)
+	List<Course> courseWith100StepsInNameUsingNativeQuery();
+
+	@Query(name = "query_get_100_Step_courses")
+	List<Course> courseWith100StepsInNameUsingNamedQuery();
+}
+```
+
+# Performance Tuning
+* Monitor your performance statistics in hibernate. Turn on statistics in app.properties file
+* Avoid N + 1 problems. For ex. when you query an entity because of the its relationship
+it can create a lot of query. First solution should be use lazy fetch in relations.
+* Another solutions is adding graph => Just get all details in one query instead of 3 query
+* Another solution is using join fetch => it also use one query instead of 3 query.
+
+## Difference Join and Join Fetch
+In this two queries, you are using JOIN to query all employees that have at least one department associated.
+
+But, the difference is: in the first query you are returning only the Employes for the Hibernate. In the second query, you are returning the Employes and all Departments associated.
+
+So, if you use the second query, you will not need to do a new query to hit the database again to see the Departments of each Employee.
+
+You can use the second query when you are sure that you will need the Department of each Employee. If you not need the Department, use the first query.
+
 # FAQS
+## Embedded and Embeddable
+Think that you have a class Address and a student has address object.
+If we want student table has address class properties inside it, we just add Embeddable to the address
+class and add Embedded in student class to the head of the address object.
+
+## Using Enum in Entity Class
+Use Enumerated annotation in the enum field
+
+## ToString Method
+Assume that you have Course and Reviews. This is one to many relationship and
+when we query course entity we don't get reviews by default.
+<br>
+But, if you add review to toString method in course entity, then review
+informations are gonna fetch from db. So be careful with the implementation
+of the toString() method.
+
 ## When Hibernate Sends Updates to Db?
 Assume that we have this method. Hibernate keeps all the changes until the end of the method.
 When method finished hibernate sends updates to db.

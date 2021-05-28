@@ -14,7 +14,7 @@ Difference from Jpa repositories;
 
 ## Repository Hierarchy
 
-![](D:\Repositories\spring-notes\images\spring-data-jpa\1.PNG)
+![](..\images\spring-data-jpa\1.PNG)
 
 Only JpaRepository comes from Spring Data JPA, the other repositories are available in Spring Data that means we can use
 in for example Spring Data MongoDb
