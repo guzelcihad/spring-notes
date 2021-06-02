@@ -79,3 +79,42 @@ The @ExceptionHandler annotation gives us a lot of flexibility in terms of handl
 
 ## ControllerAdvice
 Controller advice classes allow us to apply exception handlers to more than one or all controllers in our application:
+
+# Global Exception Handling
+We use `ResponseEntityExceptionHandler` class for this. We need to extend this class.<br>
+We need to also add `@ControllerAdvice`.
+> `@ControllerAdvice` is to implement logic common to all the controllers.Its a specialization of Component for classes that declare exception methods to be shared
+across multiple controller classes.  
+
+Ok, we just create a custom class that extends `ResponseEntityExceptionHandler` and implement
+a method called `handleException`. But this method is final so we just change the name as `handleAllExceptions`. <br>
+So, what we want to do in this method is that ne create an `ExceptionResponse` class with defined
+fields that represents common messages.
+
+The class looks like this. We just add methods for custom exception that we need to handle
+@ControllerAdvice
+public class CustomExceptionHandler extends ResponseEntityExceptionHandler {
+```
+    @ExceptionHandler(Exception.class)
+    public final ResponseEntity<Object> handleAllExceptions
+            (Exception ex, WebRequest request) throws Exception {
+
+        ExceptionResponse exceptionResponse = new ExceptionResponse().setTimestamp(new Date())
+                .setMessage(ex.getMessage())
+                .setMessage(request.getDescription(false));
+
+        return new ResponseEntity(exceptionResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public final ResponseEntity<Object> handleUserNotFoundExceptions
+            (UserNotFoundException ex, WebRequest request) throws Exception {
+
+        ExceptionResponse exceptionResponse = new ExceptionResponse().setTimestamp(new Date())
+                .setMessage(ex.getMessage())
+                .setMessage(request.getDescription(false));
+
+        return new ResponseEntity(exceptionResponse, HttpStatus.NOT_FOUND);
+    }
+}
+```
