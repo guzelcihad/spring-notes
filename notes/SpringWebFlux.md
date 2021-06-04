@@ -174,3 +174,326 @@ This is for clarity.
 <p>
 Think Mono like reactive version of Optional type in Java.
 Think Flux like list.
+
+![alt text](../images/webflux/1.PNG)
+![alt text](../images/webflux/2.PNG)
+![alt text](../images/webflux/3.PNG)
+![alt text](../images/webflux/4.PNG)
+
+# PROGRAMMING
+Define flux and subcribe it.
+
+```
+Flux<String> stringFlux = Flux.just("Spring", "Spring Boot", "Reactive String");
+stringFlux.subscribe(System.out::println);
+```
+If we log everything just typing `Flux.just("Spring", "Spring Boot", "Reactive String").log();`<br>
+It prints everything under the hood.
+```
+23:20:15.862 [main] DEBUG reactor.util.Loggers - Using Slf4j logging framework
+23:20:15.874 [main] INFO reactor.Flux.Array.1 - | onSubscribe([Synchronous Fuseable] FluxArray.ArraySubscription)
+23:20:15.876 [main] INFO reactor.Flux.Array.1 - | request(unbounded)
+23:20:15.876 [main] INFO reactor.Flux.Array.1 - | onNext(Spring)
+Spring
+23:20:15.876 [main] INFO reactor.Flux.Array.1 - | onNext(Spring Boot)
+Spring Boot
+23:20:15.876 [main] INFO reactor.Flux.Array.1 - | onNext(Reactive String)
+Reactive String
+23:20:15.876 [main] INFO reactor.Flux.Array.1 - | onComplete()
+```
+
+If we raise exception, we can handle it
+```
+   Flux<String> stringFlux = Flux.just("Spring", "Spring Boot", "Reactive String")
+                .concatWith(Flux.error(new RuntimeException("err"))).log();
+
+        stringFlux.subscribe(System.out::println, throwable -> System.err.println(throwable));
+```
+
+```
+23:23:49.942 [main] DEBUG reactor.util.Loggers - Using Slf4j logging framework
+23:23:49.957 [main] INFO reactor.Flux.ConcatArray.1 - onSubscribe(FluxConcatArray.ConcatArraySubscriber)
+23:23:49.959 [main] INFO reactor.Flux.ConcatArray.1 - request(unbounded)
+23:23:49.960 [main] INFO reactor.Flux.ConcatArray.1 - onNext(Spring)
+Spring
+23:23:49.960 [main] INFO reactor.Flux.ConcatArray.1 - onNext(Spring Boot)
+Spring Boot
+23:23:49.960 [main] INFO reactor.Flux.ConcatArray.1 - onNext(Reactive String)
+Reactive String
+23:23:49.961 [main] ERROR reactor.Flux.ConcatArray.1 - onError(java.lang.RuntimeException: err)
+23:23:49.967 [main] ERROR reactor.Flux.ConcatArray.1 - 
+java.lang.RuntimeException: err
+	at com.guzelcihad.reactivedemo.FluxAndMonoTest.fluxTest(FluxAndMonoTest.java:14)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+```
+
+Subscriber method can take 3 parameters. 
+* The first takes lambda to perform when an onNext called
+* The second takes lambda to perform when an onError called
+* The third one takes lambda to perform when onComplete called.
+
+## Step Verifier Class
+Subscribe to publisher and verifies data in order
+
+```
+    @Test
+    public void fluxTestElements() {
+        Flux<String> stringFlux = Flux.just("Spring", "Spring Boot", "Reactive Spring");
+        StepVerifier.create(stringFlux)
+                .expectNext("Spring")
+                .expectNext("Spring Boot")
+                .expectNext("Reactive Spring")
+                .verifyComplete();
+    }
+```
+
+Test error is expected 
+```
+    @Test
+    public void fluxTestElementsWithError() {
+        Flux<String> stringFlux = Flux.just("Spring", "Spring Boot", "Reactive Spring")
+                .concatWith(Flux.error(new RuntimeException("An error occured")))
+                .log();
+
+        StepVerifier.create(stringFlux)
+                .expectNext("Spring")
+                .expectNext("Spring Boot")
+                .expectNext("Reactive Spring")
+                //.expectError(RuntimeException.class)
+                .expectErrorMessage("An error occured")
+                .verify();
+    }
+```
+
+## Factory Methods
+```
+public class FactoryMethods {
+
+    List<String> names = List.of("Adam", "Anna", "Jack", "Jenny");
+    
+    @Test
+    public void fluxUsingIterable() {
+        Flux<String> namesFlux = Flux.fromIterable(names);
+
+        StepVerifier.create(namesFlux.log())
+                .expectNextCount(4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void fluxFromArray() {
+        String[] strings = names.toArray(String[]::new);
+        Flux<String> stringFlux = Flux.fromArray(strings);
+
+        StepVerifier.create(stringFlux.log())
+                .expectNextCount(4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void fluxFromStream() {
+        Stream<String> stream = names.stream();
+        Flux<String> stringFlux = Flux.fromStream(stream);
+
+        StepVerifier.create(stringFlux.log())
+                .expectNextCount(4)
+                .verifyComplete();
+    }
+
+    @Test
+    public void monoNullOrEmpty() {
+        Mono<Object> objectMono = Mono.justOrEmpty(null);
+        StepVerifier.create(objectMono.log())
+                .verifyComplete();
+    }
+
+    @Test
+    public void monoFromSupplier() {
+        Mono<String> stringMono = Mono.fromSupplier(() -> "Adam");
+        StepVerifier.create(stringMono.log())
+                .expectNext("Adam")
+                .verifyComplete();
+    }
+
+    @Test
+    public void fluxFromRange() {
+        Flux<Integer> range = Flux.range(1, 5);
+        StepVerifier.create(range.log())
+                .expectNext(1,2,3,4,5)
+                .verifyComplete();
+    }
+}
+```
+
+## Flux Filter
+```
+public class FluxWithFilter {
+
+    List<String> names = List.of("Adam", "Anna", "Jack", "Jenny");
+
+    @Test
+    public void filterTest() {
+        Flux<String> stringFlux = Flux.fromIterable(names)
+                .filter(s -> s.startsWith("A"))
+                .log();
+
+        StepVerifier.create(stringFlux)
+                .expectNext("Adam", "Anna")
+                .verifyComplete();
+    }
+}
+```
+
+## FlatMap
+Usefull in db or request call operations.<br>
+takes parameter and return Flux<String>
+
+Example
+```
+    @Test
+    public void flatMap() {
+        Flux<Object> flatMap = Flux.fromIterable(names)
+                .flatMap(s -> {
+                    return Flux.fromIterable(convertToList(s));
+                });
+
+        flatMap.subscribe(s -> System.out.println(s)); //prints 12 elements
+    }
+
+    private List<String> convertToList(String s) {
+        return List.of(s, "newValue");
+    }
+```
+
+## Merge, Concat, Zip
+```
+  Flux<String> flux1 = Flux.just("A", "B");
+        Flux<String> flux2 = Flux.just("C", "D");
+        Flux<String> merge = Flux.merge(flux1, flux2);
+
+        StepVerifier.create(merge.log())
+                .expectNextCount(4)
+                .verifyComplete();
+```
+
+zip outputs like this AC, BD 
+
+## Backpressure
+Subscriber controls the flow
+
+![alt text](../images/webflux/5.PNG)
+![alt text](../images/webflux/6.PNG)
+
+```
+  Flux<Integer> log = Flux.range(1, 10).log();
+
+        StepVerifier.create(log)
+                .expectSubscription()
+                .thenRequest(1)
+                .expectNext(1)
+                .thenRequest(1)
+                .expectNext(2)
+                .thenCancel()
+                .verify();
+```
+Outputs:
+```
+00:34:57.900 [main] INFO reactor.Flux.Range.1 - | onSubscribe([Synchronous Fuseable] FluxRange.RangeSubscription)
+00:34:57.904 [main] INFO reactor.Flux.Range.1 - | request(1)
+00:34:57.904 [main] INFO reactor.Flux.Range.1 - | onNext(1)
+00:34:57.904 [main] INFO reactor.Flux.Range.1 - | request(1)
+00:34:57.904 [main] INFO reactor.Flux.Range.1 - | onNext(2)
+00:34:57.905 [main] INFO reactor.Flux.Range.1 - | cancel()
+00:34:57.905 [main] INFO reactor.Flux.Range.1 - | request(unbounded)
+```
+
+An example of subsriber
+```
+    @Test
+    public void subscriptionExample() {
+        Flux<Integer> flux = Flux.range(1, 10).log();
+
+        flux.subscribeWith(new BaseSubscriber<Integer>() {
+            @Override
+            protected void hookOnNext(Integer value) {
+                System.out.println("integer = " + value);
+            }
+
+            @Override
+            protected void hookOnError(Throwable throwable) {
+                System.err.println("Exception is: " + throwable);
+            }
+
+            @Override
+            protected void hookOnSubscribe(Subscription subscription) {
+                subscription.request(2);
+            }
+        });
+
+    }
+```
+
+Subscription with cancel method
+
+```
+finiteFlux.subscribeWith(new BaseSubscriber<Integer>() {
+    @Override
+    protected void hookOnNext(Integer value) {
+        System.out.println("integer = " + value);
+    }
+ 
+    @Override
+    protected void hookOnError(Throwable throwable) {
+        System.err.println("Exception is: " + throwable);
+    }
+ 
+    @Override
+    protected void hookOnSubscribe(Subscription subscription) {
+        subscription.cancel();
+    }
+});
+```
+
+## Hot and Cold Reactive Streams?
+
+## Functional Web
+Use functions to route to request and response.<br>
+two functions available. Router function and handler function
+
+## Netty
+Asynchronous event driven network app. framework for rapid development
+of maintainable high performance  protocol or servers.
+<br>
+Facebook, twitter, google, instagram
+<br>
+Support http, sftp, ftp, websocket etc
+
+## Why use flatMap in update operation
+
+```
+return itemReactiveRepository.findById(id) // Mono<Item>
+        .flatMap(currentItem -> {
+ 
+            currentItem.setPrice(item.getPrice());
+            currentItem.setDescription(item.getDescription());
+            return itemReactiveRepository.save(currentItem); // Changed Mono<Item> to Item
+        })
+        .map(updatedItem -> new ResponseEntity<>(updatedItem, HttpStatus.OK))
+        .defaultIfEmpty(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+```
+
+We have a transformation thats happening here too thats why I have used flatMap.
+
+The transformation is converting from Mono<Item> to Item using the flatMap. I have provided that in the code comments below.
+
+This kind of conversion would never be possible using map method.
+> PS: FlatMap in the project reactor is different from flatMap in Java8 streams API.
+
+## Webclient
+Its a class to build non-blocking client application in reactor. Its similar
+to RestTemplate.
+
+## Streaming Real Time Data Through an Endpoint
+Its also known as Server side events. So, what is it?
+* An endpoint once the connection  is made its going to keep pushing the data to the client as the 
+new data available.
