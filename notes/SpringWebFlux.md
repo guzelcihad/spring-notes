@@ -497,3 +497,10 @@ to RestTemplate.
 Its also known as Server side events. So, what is it?
 * An endpoint once the connection  is made its going to keep pushing the data to the client as the 
 new data available.
+
+## Server Sent Events (SSE)
+Think that for some reason client application sends request to web server periodically.
+<br>
+Instead of this we can use SSE, this is one way communication. Webserver send data when a change happens,
+it pushes. <br>
+For ex we can use this when a product info added or changes, to the web client.
