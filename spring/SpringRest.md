@@ -194,9 +194,3 @@ IT should return a response like this
     }
 }
 ```
-
-# Advanced Topics
-## Internationalization
-Customizing services for different kind of people around the world.
-To achieve that we need to use 
-![alt text](/images/spring-rest/1.PNG)
